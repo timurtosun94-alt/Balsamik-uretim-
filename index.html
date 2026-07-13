@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2D5016">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Balsamik Takip">
+<title>Ergines Balsamik Takip</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{
+    --primary:#2D5016; --primary-dark:#1c3410; --secondary:#D4AF37; --accent:#4A90A4;
+    --bg:#F7F3EA; --card:#FFFFFF; --ink:#2A2620; --muted:#8A8272; --line:#E7E0CF;
+    --danger:#B4472B; --ok:#3C7A3C; --warn:#B8860B;
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+    --safe-top: env(safe-area-inset-top, 0px);
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    -webkit-tap-highlight-color:transparent; overscroll-behavior-y:none;}
+  #app{max-width:560px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;}
+
+  header.topbar{position:sticky;top:0;z-index:10;background:var(--primary);color:#fff;
+    padding:calc(14px + var(--safe-top)) 18px 14px;display:flex;align-items:center;gap:10px;
+    box-shadow:0 2px 8px rgba(0,0,0,.15);}
+  header.topbar .logo{width:30px;height:30px;border-radius:8px;background:var(--secondary);
+    display:flex;align-items:center;justify-content:center;font-size:16px;flex:none;}
+  header.topbar h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.2px;}
+  header.topbar .sub{font-size:11px;opacity:.85;margin-top:1px;}
+  header.topbar .role-pill{margin-left:auto;background:rgba(255,255,255,.18);color:#fff;
+    font-size:10.5px;font-weight:700;padding:5px 10px;border-radius:20px;}
+
+  main{flex:1;padding:14px 14px calc(90px + var(--safe-bottom));}
+
+  .cards-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px;}
+  .stat-card{background:var(--card);border-radius:14px;padding:14px;border:1px solid var(--line);}
+  .stat-card .num{font-size:26px;font-weight:800;color:var(--primary);line-height:1.1;}
+  .stat-card .label{font-size:11.5px;color:var(--muted);margin-top:4px;}
+  .stat-card .icon{font-size:18px;margin-bottom:6px;}
+
+  .section-title{font-size:13px;font-weight:700;color:var(--primary-dark);
+    text-transform:uppercase;letter-spacing:.5px;margin:18px 0 8px;display:flex;align-items:center;gap:6px;}
+
+  .add-btn{width:100%;background:var(--primary);color:#fff;border:none;border-radius:14px;
+    padding:14px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;
+    gap:8px;box-shadow:0 3px 10px rgba(45,80,22,.25);}
+  .add-btn:active{transform:scale(.98);}
+
+  .record-card{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:13px 14px;margin-bottom:10px;position:relative;}
+  .record-card .rc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+  .record-card .rc-title{font-weight:700;font-size:14.5px;color:var(--ink);}
+  .record-card .rc-date{font-size:11.5px;color:var(--muted);margin-top:2px;}
+  .record-card .rc-body{margin-top:8px;font-size:13px;color:#4a453a;line-height:1.55;}
+  .record-card .rc-body b{color:var(--ink);}
+  .record-card .rc-actions{display:flex;gap:6px;align-items:flex-start;}
+  .record-card .icon-btn{background:none;border:none;color:var(--accent);font-size:16px;padding:2px 4px;}
+  .record-card .del{background:none;border:none;color:var(--danger);font-size:18px;padding:2px 4px;}
+  .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:11px;font-weight:700;
+    color:#fff;margin-top:6px;margin-right:4px;}
+  .badge.green{background:var(--ok);} .badge.gold{background:var(--secondary);color:#3a2c00;}
+  .badge.blue{background:var(--accent);} .badge.red{background:var(--danger);}
+  .badge.gray{background:#9a9384;}
+
+  .reminder{border-radius:14px;padding:12px 14px;margin-bottom:9px;display:flex;gap:10px;
+    align-items:flex-start;border:1px solid transparent;}
+  .reminder.due{background:#FBEAE4;border-color:#E7B7A4;}
+  .reminder.warn{background:#FCF3D9;border-color:#E9D08E;}
+  .reminder .r-ic{font-size:18px;}
+  .reminder .r-t{font-size:13.5px;font-weight:700;}
+  .reminder .r-d{font-size:12px;color:var(--muted);margin-top:1px;}
+
+  .empty{text-align:center;color:var(--muted);font-size:13px;padding:30px 10px;}
+
+  .modal-backdrop{position:fixed;inset:0;background:rgba(20,15,5,.45);z-index:40;
+    display:flex;align-items:flex-end;}
+  .modal-backdrop.center{align-items:center;padding:20px;}
+  .modal{background:var(--bg);width:100%;max-width:560px;margin:0 auto;border-radius:20px 20px 0 0;
+    padding:18px 18px calc(24px + var(--safe-bottom));max-height:88vh;overflow-y:auto;}
+  .modal-backdrop.center .modal{border-radius:20px;max-height:80vh;}
+  .modal h2{margin:0 0 14px;font-size:17px;color:var(--primary-dark);display:flex;align-items:center;gap:8px;}
+  .field{margin-bottom:12px;}
+  .field label{display:block;font-size:12px;font-weight:700;color:var(--muted);margin-bottom:5px;}
+  .field input,.field select,.field textarea{width:100%;padding:11px 12px;border-radius:10px;
+    border:1.5px solid var(--line);background:#fff;font-size:14.5px;color:var(--ink);font-family:inherit;}
+  .field textarea{resize:vertical;min-height:60px;}
+  .field-with-scan{display:flex;gap:8px;}
+  .field-with-scan select{flex:1;}
+  .scan-btn{flex:none;background:var(--accent);color:#fff;border:none;border-radius:10px;
+    width:44px;font-size:18px;}
+  .field-row{display:flex;gap:10px;}
+  .field-row .field{flex:1;}
+  .modal-actions{display:flex;gap:10px;margin-top:16px;}
+  .btn{flex:1;padding:13px;border-radius:12px;border:none;font-weight:700;font-size:14.5px;}
+  .btn.primary{background:var(--primary);color:#fff;}
+  .btn.ghost{background:#fff;color:var(--ink);border:1.5px solid var(--line);}
+
+  nav.tabbar{position:fixed;bottom:0;left:0;right:0;background:#fff;border-top:1px solid var(--line);
+    display:flex;padding-bottom:var(--safe-bottom);z-index:20;max-width:560px;margin:0 auto;
+    overflow-x:auto;}
+  nav.tabbar button{flex:1;min-width:44px;background:none;border:none;padding:9px 2px 8px;display:flex;
+    flex-direction:column;align-items:center;gap:2px;color:var(--muted);font-family:inherit;}
+  nav.tabbar button .ic{font-size:19px;}
+  nav.tabbar button .lb{font-size:9px;font-weight:700;white-space:nowrap;}
+  nav.tabbar button.active{color:var(--primary);}
+
+  .toast{position:fixed;bottom:calc(78px + var(--safe-bottom));left:50%;transform:translateX(-50%);
+    background:#2A2620;color:#fff;padding:10px 18px;border-radius:30px;font-size:13px;z-index:60;
+    box-shadow:0 4px 14px rgba(0,0,0,.25);max-width:88%;text-align:center;}
+
+  .settings-row{background:var(--card);border:1px solid var(--line);border-radius:14px;
+    padding:14px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:10px;}
+  .settings-row .t{font-weight:700;font-size:14px;} .settings-row .d{font-size:12px;color:var(--muted);margin-top:2px;}
+  .small-btn{background:var(--primary);color:#fff;border:none;border-radius:10px;padding:9px 14px;font-size:13px;font-weight:700;white-space:nowrap;}
+  .small-btn.ghost{background:#fff;color:var(--danger);border:1.5px solid var(--danger);}
+  .role-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+  .role-opt{background:#fff;border:1.5px solid var(--line);border-radius:12px;padding:10px;text-align:center;font-size:12.5px;font-weight:700;}
+  .role-opt.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+
+  .qr-wrap{text-align:center;padding:10px 0;}
+  .qr-wrap canvas{background:#fff;border-radius:12px;padding:10px;border:1px solid var(--line);}
+  .qr-wrap .code{font-size:13px;color:var(--muted);margin-top:8px;font-family:monospace;}
+  video#scanVideo{width:100%;border-radius:14px;background:#000;}
+  .scan-hint{font-size:12px;color:var(--muted);text-align:center;margin-top:8px;}
+
+  canvas.chart{width:100%;height:180px;background:var(--card);border:1px solid var(--line);border-radius:14px;}
+  .legend{display:flex;flex-wrap:wrap;gap:10px;margin-top:8px;font-size:11.5px;}
+  .legend span{display:flex;align-items:center;gap:5px;}
+  .legend i{width:9px;height:9px;border-radius:3px;display:inline-block;}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="jsQR.js"></script>
+<script src="qrcode.bundle.min.js"></script>
+<script src="jspdf.umd.min.js"></script>
+
+<script>
+/* ================= Veri Modeli ================= */
+const STAGES = {
+  hasat: { label:"Hasat ve Şıra", icon:"🍇", key:"parti_no", qrPrefix:"PARTI-",
+    fields:[
+      {k:"parti_no",l:"Parti No",t:"text",req:true,ph:"örn. 2026-001"},
+      {k:"tarih",l:"Tarih",t:"date",req:true},
+      {k:"uzum_cesidi",l:"Üzüm Çeşidi",t:"select",opts:["Harman","Cabernet Franc","Chardonnay","Cabernet Sauvignon"]},
+      {k:"agirlik_kg",l:"Ağırlık (kg)",t:"number"},
+      {k:"brix",l:"Brix",t:"number"},
+      {k:"ph",l:"pH",t:"number",step:"0.1"},
+      {k:"sira_miktari_l",l:"Şıra Miktarı (L)",t:"number"},
+      {k:"notlar",l:"Notlar",t:"textarea"}
+    ]},
+  yogunlastirma: { label:"Yoğunlaştırma", icon:"🔥", key:"parti_no", ref:"hasat",
+    fields:[
+      {k:"parti_no",l:"Parti No",t:"ref",req:true,scan:true,qrPrefix:"PARTI-"},
+      {k:"baslangic",l:"Başlangıç",t:"datetime-local"},
+      {k:"bitis",l:"Bitiş",t:"datetime-local"},
+      {k:"sicaklik",l:"Sıcaklık (°C)",t:"number"},
+      {k:"brix_baslangic",l:"Brix (Başlangıç)",t:"number"},
+      {k:"brix_son",l:"Brix (Son)",t:"number"},
+      {k:"notlar",l:"Notlar",t:"textarea"}
+    ]},
+  fermantasyon: { label:"Fermantasyon", icon:"🧪", key:"parti_no", ref:"hasat",
+    fields:[
+      {k:"parti_no",l:"Parti No",t:"ref",req:true,scan:true,qrPrefix:"PARTI-"},
+      {k:"tarih",l:"Tarih",t:"date",req:true},
+      {k:"sicaklik",l:"Sıcaklık (°C)",t:"number"},
+      {k:"brix",l:"Brix",t:"number"},
+      {k:"ph",l:"pH",t:"number",step:"0.1"},
+      {k:"tip",l:"Fermantasyon Tipi",t:"select",opts:["Alkol","Asetifikasyon"]},
+      {k:"maya_eklendi",l:"Maya/Bakteri Eklendi",t:"select",opts:["Evet","Hayır"]},
+      {k:"notlar",l:"Notlar",t:"textarea"}
+    ]},
+  olgunlastirma: { label:"Olgunlaştırma", icon:"🛢️", key:"fici_no", ref:"hasat", qrPrefix:"FICI-",
+    fields:[
+      {k:"fici_no",l:"Fıçı No",t:"text",req:true,ph:"örn. F-001"},
+      {k:"parti_no",l:"Parti No",t:"ref",req:true,scan:true,qrPrefix:"PARTI-"},
+      {k:"ahsap_tipi",l:"Ahşap Tipi",t:"select",opts:["Meşe","Kestane","Kiraz","Akasya","Dut"]},
+      {k:"dolum_tarihi",l:"Dolum Tarihi",t:"date"},
+      {k:"miktar_l",l:"Miktar (L)",t:"number"},
+      {k:"hedef_sure_ay",l:"Hedef Süre (Ay)",t:"select",opts:["6","12","24","60"]},
+      {k:"son_aktarim_tarihi",l:"Son Aktarım Tarihi (varsa)",t:"date"},
+      {k:"konum",l:"Konum",t:"text",ph:"örn. Bodrum, Serin Oda"},
+      {k:"notlar",l:"Notlar",t:"textarea"}
+    ]},
+  kalite: { label:"Kalite Kontrol", icon:"✅", key:"fici_no", ref:"olgunlastirma", refKey:"fici_no", qrPrefixRef:"FICI-",
+    fields:[
+      {k:"fici_no",l:"Fıçı No",t:"ref",req:true,scan:true,qrPrefix:"FICI-"},
+      {k:"tarih",l:"Tarih",t:"date",req:true},
+      {k:"brix",l:"Brix",t:"number"},
+      {k:"ph",l:"pH",t:"number",step:"0.1"},
+      {k:"tadim_puani",l:"Tadım Puanı (1-10)",t:"number"},
+      {k:"renk",l:"Renk",t:"select",opts:["Koyu Kahve","Açık Kahve","Amber"]},
+      {k:"kivam",l:"Kıvam",t:"select",opts:["Yoğun","Orta","Akışkan"]},
+      {k:"onay",l:"Onay",t:"select",opts:["Devam Et","Şişele","Problem Var"]},
+      {k:"notlar",l:"Notlar",t:"textarea"}
+    ]},
+  siseleme: { label:"Şişeleme ve Stok", icon:"🍾", key:"parti_no", ref:"hasat",
+    fields:[
+      {k:"parti_no",l:"Parti No",t:"ref",req:true,scan:true,qrPrefix:"PARTI-"},
+      {k:"tarih",l:"Tarih",t:"date",req:true},
+      {k:"hacim_ml",l:"Şişe Hacmi (ml)",t:"select",opts:["100","250"]},
+      {k:"adet",l:"Şişe Sayısı",t:"number"},
+      {k:"seri",l:"Seri",t:"select",opts:["Classic","Premium","Reserve"]},
+      {k:"fiyat_tl",l:"Birim Fiyat (TL)",t:"number"},
+      {k:"stok_durumu",l:"Stok Durumu",t:"select",opts:["Stokta","Satıldı","Rezerve"]},
+      {k:"musteri",l:"Müşteri",t:"text"},
+      {k:"notlar",l:"Notlar",t:"textarea"}
+    ]}
+};
+const STAGE_ORDER = ["hasat","yogunlastirma","fermantasyon","olgunlastirma","kalite","siseleme"];
+const STORE_KEY = "ergines_balsamik_v2";
+const ROLE_KEY = "ergines_balsamik_role";
+const LASTBACKUP_KEY = "ergines_balsamik_lastbackup";
+const AUTOBACKUP_PREFIX = "ergines_balsamik_autobackup_";
+const LOW_STOCK_THRESHOLD = 50;
+const TADIM_INTERVAL_DAYS = 90;
+const AKTARIM_INTERVAL_DAYS = 730;
+
+const ROLES = {
+  Admin:    {label:"Admin", tabs:["dashboard","hasat","yogunlastirma","fermantasyon","olgunlastirma","kalite","siseleme","ayarlar"]},
+  Uretici:  {label:"Üretici", tabs:["dashboard","hasat","yogunlastirma","fermantasyon","olgunlastirma","ayarlar"]},
+  Tadim:    {label:"Tadım Uzmanı", tabs:["dashboard","kalite","ayarlar"]},
+  Satis:    {label:"Satış", tabs:["dashboard","siseleme","ayarlar"]}
+};
+
+function loadData(){
+  try{
+    const raw = localStorage.getItem(STORE_KEY);
+    if(raw) return JSON.parse(raw);
+    const oldRaw = localStorage.getItem("ergines_balsamik_v1");
+    if(oldRaw) return JSON.parse(oldRaw);
+  }catch(e){}
+  const empty = {}; STAGE_ORDER.forEach(s=>empty[s]=[]);
+  return empty;
+}
+function saveData(data){
+  localStorage.setItem(STORE_KEY, JSON.stringify(data));
+  rotateAutoBackup(data);
+}
+function rotateAutoBackup(data){
+  try{
+    const now = new Date().toISOString();
+    const keys = Object.keys(localStorage).filter(k=>k.startsWith(AUTOBACKUP_PREFIX)).sort();
+    localStorage.setItem(AUTOBACKUP_PREFIX+now, JSON.stringify(data));
+    const all = Object.keys(localStorage).filter(k=>k.startsWith(AUTOBACKUP_PREFIX)).sort();
+    while(all.length > 3){ localStorage.removeItem(all.shift()); }
+  }catch(e){}
+}
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function getRole(){ return localStorage.getItem(ROLE_KEY) || "Admin"; }
+function setRole(r){ localStorage.setItem(ROLE_KEY, r); }
+function daysBetween(a,b){ return Math.floor((b-a)/(1000*60*60*24)); }
+
+let DATA = loadData();
+let TAB = "dashboard";
+let modalStage = null;
+let qrModal = null;      // {text, label}
+let scanModal = null;    // {stage, fieldKey}
+let scanStream = null;
+let scanRAF = null;
+
+/* ================= Yardımcılar ================= */
+const app = document.getElementById("app");
+
+function fmtDate(s){
+  if(!s) return "";
+  try{
+    const d = new Date(s);
+    if(isNaN(d)) return s;
+    return d.toLocaleDateString("tr-TR",{day:"2-digit",month:"short",year:"numeric"}) +
+      (s.includes("T") ? " · "+d.toLocaleTimeString("tr-TR",{hour:"2-digit",minute:"2-digit"}) : "");
+  }catch(e){ return s; }
+}
+function badgeClass(field, val){
+  if(field==="stok_durumu") return val==="Stokta"?"green":val==="Satıldı"?"gray":"gold";
+  if(field==="onay") return val==="Devam Et"?"blue":val==="Şişele"?"green":"red";
+  if(field==="tip") return val==="Alkol"?"gold":"blue";
+  if(field==="seri") return val==="Reserve"?"gold":val==="Premium"?"blue":"gray";
+  return "gray";
+}
+function statCounts(){
+  const toplamParti = DATA.hasat.length;
+  const aktifFerm = DATA.fermantasyon.filter(r=>r.tip==="Alkol").length;
+  const ficidaBekleyen = DATA.olgunlastirma.length;
+  const stoktaSise = DATA.siseleme.filter(r=>r.stok_durumu==="Stokta")
+    .reduce((sum,r)=>sum+(parseInt(r.adet)||0),0);
+  return {toplamParti, aktifFerm, ficidaBekleyen, stoktaSise};
+}
+
+/* ================= Hatırlatmalar ================= */
+function computeReminders(){
+  const list = [];
+  const today = new Date();
+
+  // Tadım hatırlatıcı: her fıçı için son kalite kontrolden (veya dolum tarihinden) 90+ gün geçtiyse
+  DATA.olgunlastirma.forEach(f=>{
+    const kkRecs = DATA.kalite.filter(k=>k.fici_no===f.fici_no).sort((a,b)=>new Date(a.tarih)-new Date(b.tarih));
+    const last = kkRecs.length ? new Date(kkRecs[kkRecs.length-1].tarih) : (f.dolum_tarihi?new Date(f.dolum_tarihi):null);
+    if(last && !isNaN(last)){
+      const d = daysBetween(last, today);
+      if(d >= TADIM_INTERVAL_DAYS){
+        list.push({type:"due", icon:"✅", title:`${f.fici_no} için tadım zamanı geldi`,
+          detail:`Son kontrolden bu yana ${d} gün geçti (hedef: ${TADIM_INTERVAL_DAYS} günde bir)`});
+      }
+    }
+  });
+
+  // Aktarım hatırlatıcı: son aktarım (veya dolum) tarihinden 730+ gün geçtiyse
+  DATA.olgunlastirma.forEach(f=>{
+    const base = f.son_aktarim_tarihi || f.dolum_tarihi;
+    if(base){
+      const d = daysBetween(new Date(base), today);
+      if(d >= AKTARIM_INTERVAL_DAYS){
+        list.push({type:"due", icon:"🛢️", title:`${f.fici_no} için aktarım zamanı geldi`,
+          detail:`${d} gün önce dolduruldu/aktarıldı (hedef: ${AKTARIM_INTERVAL_DAYS} günde bir)`});
+      }
+    }
+  });
+
+  // Düşük stok uyarısı: seri bazında stokta < 50
+  const bySeri = {};
+  DATA.siseleme.filter(r=>r.stok_durumu==="Stokta").forEach(r=>{
+    bySeri[r.seri] = (bySeri[r.seri]||0) + (parseInt(r.adet)||0);
+  });
+  Object.keys(bySeri).forEach(seri=>{
+    if(bySeri[seri] < LOW_STOCK_THRESHOLD){
+      list.push({type:"warn", icon:"🍾", title:`${seri} serisi stokta azalıyor`,
+        detail:`${bySeri[seri]} şişe kaldı (eşik: ${LOW_STOCK_THRESHOLD})`});
+    }
+  });
+
+  // Yedek alma hatırlatıcı: 7+ gündür yedek alınmadıysa
+  const lastBackup = localStorage.getItem(LASTBACKUP_KEY);
+  const bd = lastBackup ? daysBetween(new Date(lastBackup), today) : Infinity;
+  if(bd >= 7){
+    list.push({type:"warn", icon:"💾", title:"Yedek almanı öneririz",
+      detail: lastBackup ? `Son yedek ${bd} gün önce alındı` : "Henüz hiç yedek almadın"});
+  }
+
+  return list;
+}
+
+/* ================= QR / Barkod ================= */
+function openQr(text, label){ qrModal = {text, label}; render(); setTimeout(drawQr, 30); }
+function closeQr(){ qrModal = null; render(); }
+function drawQr(){
+  const canvas = document.getElementById("qrCanvas");
+  if(!canvas || !window.QRCode) return;
+  QRCode.toCanvas(canvas, qrModal.text, {width:220, margin:1, color:{dark:"#2D5016", light:"#FFFFFF"}}, function(err){});
+}
+function downloadQr(){
+  const canvas = document.getElementById("qrCanvas");
+  if(!canvas) return;
+  const a = document.createElement("a");
+  a.href = canvas.toDataURL("image/png");
+  a.download = `${qrModal.text}.png`;
+  a.click();
+}
+
+function openScan(stage, fieldKey, qrPrefix){
+  scanModal = {stage, fieldKey, qrPrefix};
+  render();
+  setTimeout(startScanCamera, 50);
+}
+function closeScan(){
+  stopScanCamera();
+  scanModal = null;
+  render();
+}
+async function startScanCamera(){
+  const video = document.getElementById("scanVideo");
+  if(!video) return;
+  try{
+    scanStream = await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});
+    video.srcObject = scanStream;
+    await video.play();
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const tick = () => {
+      if(!scanModal) return;
+      if(video.readyState === video.HAVE_ENOUGH_DATA){
+        canvas.width = video.videoWidth; canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = window.jsQR ? jsQR(imgData.data, imgData.width, imgData.height) : null;
+        if(code && code.data){
+          handleScanResult(code.data);
+          return;
+        }
+      }
+      scanRAF = requestAnimationFrame(tick);
+    };
+    scanRAF = requestAnimationFrame(tick);
+  }catch(e){
+    document.getElementById("scanError").textContent = "Kameraya erişilemedi: " + e.message;
+  }
+}
+function stopScanCamera(){
+  if(scanRAF) cancelAnimationFrame(scanRAF);
+  if(scanStream){ scanStream.getTracks().forEach(t=>t.stop()); scanStream = null; }
+}
+function handleScanResult(text){
+  let val = text.trim();
+  const prefix = scanModal.qrPrefix;
+  if(prefix && val.startsWith(prefix)) val = val.slice(prefix.length);
+  stopScanCamera();
+  const sel = document.querySelector(`select[name="${scanModal.fieldKey}"]`);
+  scanModal = null;
+  render();
+  setTimeout(()=>{
+    const s = document.querySelector(`select[name="${sel ? sel.name : ''}"]`);
+    if(s){
+      const opt = Array.from(s.options).find(o=>o.value===val);
+      if(opt){ s.value = val; showToast(`Tarandı: ${val}`); }
+      else showToast(`"${val}" listede bulunamadı`);
+    }
+  }, 60);
+}
+
+/* ================= Grafikler ================= */
+function drawLineChart(canvas, points, color){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width = canvas.clientWidth * 2;
+  const h = canvas.height = canvas.clientHeight * 2;
+  ctx.clearRect(0,0,w,h);
+  if(points.length < 2){
+    ctx.fillStyle = "#8A8272"; ctx.font="24px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("Yeterli veri yok (en az 2 kayıt gerekli)", w/2, h/2);
+    return;
+  }
+  const pad = 30;
+  const xs = points.map(p=>p.x), ys = points.map(p=>p.y);
+  const minY = Math.min(...ys), maxY = Math.max(...ys);
+  const rangeY = (maxY - minY) || 1;
+  ctx.strokeStyle = "#E7E0CF"; ctx.lineWidth = 1;
+  for(let i=0;i<=3;i++){
+    const y = pad + (h-2*pad) * i/3;
+    ctx.beginPath(); ctx.moveTo(pad,y); ctx.lineTo(w-pad,y); ctx.stroke();
+  }
+  ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.beginPath();
+  points.forEach((p,i)=>{
+    const x = pad + (w-2*pad) * (i/(points.length-1));
+    const y = h - pad - (h-2*pad) * ((p.y-minY)/rangeY);
+    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+  });
+  ctx.stroke();
+  ctx.fillStyle = color;
+  points.forEach((p,i)=>{
+    const x = pad + (w-2*pad) * (i/(points.length-1));
+    const y = h - pad - (h-2*pad) * ((p.y-minY)/rangeY);
+    ctx.beginPath(); ctx.arc(x,y,5,0,7); ctx.fill();
+  });
+}
+function drawPieChart(canvas, segments){
+  if(!canvas) return;
+  const ctx = canvas.getContext("2d");
+  const w = canvas.width = canvas.clientWidth * 2;
+  const h = canvas.height = canvas.clientHeight * 2;
+  ctx.clearRect(0,0,w,h);
+  const total = segments.reduce((s,x)=>s+x.value,0);
+  if(total === 0){
+    ctx.fillStyle = "#8A8272"; ctx.font="24px sans-serif"; ctx.textAlign="center";
+    ctx.fillText("Henüz şişeleme verisi yok", w/2, h/2);
+    return;
+  }
+  const cx = w/2, cy = h/2, r = Math.min(w,h)/2 - 14;
+  let start = -Math.PI/2;
+  segments.forEach(seg=>{
+    const angle = (seg.value/total) * Math.PI*2;
+    ctx.beginPath(); ctx.moveTo(cx,cy);
+    ctx.arc(cx,cy,r,start,start+angle);
+    ctx.closePath(); ctx.fillStyle = seg.color; ctx.fill();
+    start += angle;
+  });
+}
+
+/* ================= PDF Raporları ================= */
+function generateQualityReportPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  doc.setFillColor(45,80,22); doc.rect(0,0,210,22,"F");
+  doc.setTextColor(255,255,255); doc.setFontSize(16);
+  doc.text("Ergines Bağcılık — Kalite Kontrol Raporu", 14, 14);
+  doc.setTextColor(40,40,40); doc.setFontSize(9);
+  doc.text(`Oluşturulma: ${new Date().toLocaleString("tr-TR")}`, 14, 29);
+
+  let y = 38;
+  doc.setFontSize(11);
+  if(DATA.kalite.length === 0){
+    doc.text("Henüz kalite kontrol kaydı bulunmuyor.", 14, y);
+  }
+  DATA.kalite.slice().sort((a,b)=>new Date(b.tarih)-new Date(a.tarih)).forEach(r=>{
+    if(y > 270){ doc.addPage(); y = 20; }
+    doc.setFont(undefined,"bold"); doc.text(`${r.fici_no}  ·  ${fmtDate(r.tarih)}`, 14, y);
+    doc.setFont(undefined,"normal");
+    doc.text(`Brix: ${r.brix||"-"}   pH: ${r.ph||"-"}   Tadım Puanı: ${r.tadim_puani||"-"}/10`, 14, y+6);
+    doc.text(`Renk: ${r.renk||"-"}   Kıvam: ${r.kivam||"-"}   Onay: ${r.onay||"-"}`, 14, y+12);
+    if(r.notlar) doc.text(`Not: ${r.notlar}`.slice(0,110), 14, y+18);
+    y += r.notlar ? 26 : 20;
+    doc.setDrawColor(230,225,210); doc.line(14,y-4,196,y-4);
+  });
+  doc.save(`kalite-kontrol-raporu-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+function generateSummaryReportPdf(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const c = statCounts();
+  doc.setFillColor(45,80,22); doc.rect(0,0,210,22,"F");
+  doc.setTextColor(255,255,255); doc.setFontSize(16);
+  doc.text("Ergines Bağcılık — Üretim Özeti Raporu", 14, 14);
+  doc.setTextColor(40,40,40); doc.setFontSize(9);
+  doc.text(`Oluşturulma: ${new Date().toLocaleString("tr-TR")}`, 14, 29);
+
+  let y = 40;
+  doc.setFontSize(12); doc.setFont(undefined,"bold");
+  doc.text("Genel Durum", 14, y); y += 7;
+  doc.setFont(undefined,"normal"); doc.setFontSize(10.5);
+  doc.text(`Toplam Parti: ${c.toplamParti}    Aktif Fermantasyon: ${c.aktifFerm}`, 14, y); y+=6;
+  doc.text(`Fıçıda Bekleyen: ${c.ficidaBekleyen}    Stokta Şişe: ${c.stoktaSise}`, 14, y); y+=12;
+
+  doc.setFont(undefined,"bold"); doc.setFontSize(12); doc.text("Fıçılar", 14, y); y+=7;
+  doc.setFont(undefined,"normal"); doc.setFontSize(9.5);
+  DATA.olgunlastirma.forEach(f=>{
+    if(y>270){ doc.addPage(); y=20; }
+    doc.text(`${f.fici_no} — ${f.ahsap_tipi||"-"} — Parti ${f.parti_no||"-"} — Dolum: ${fmtDate(f.dolum_tarihi)} — Konum: ${f.konum||"-"}`, 14, y);
+    y+=6;
+  });
+  y+=6;
+  doc.setFont(undefined,"bold"); doc.setFontSize(12); doc.text("Stok Durumu", 14, y); y+=7;
+  doc.setFont(undefined,"normal"); doc.setFontSize(9.5);
+  DATA.siseleme.forEach(s=>{
+    if(y>270){ doc.addPage(); y=20; }
+    doc.text(`Parti ${s.parti_no||"-"} — ${s.seri||"-"} — ${s.adet||0} şişe (${s.hacim_ml||"-"}ml) — ${s.stok_durumu||"-"}`, 14, y);
+    y+=6;
+  });
+  doc.save(`uretim-ozeti-raporu-${new Date().toISOString().slice(0,10)}.pdf`);
+}
+
+/* ================= Render: Dashboard ================= */
+function renderDashboard(){
+  const c = statCounts();
+  const reminders = computeReminders();
+  const recent = STAGE_ORDER.slice().reverse().flatMap(s =>
+    DATA[s].slice(-3).map(r => ({stage:s, r}))
+  ).slice(-6).reverse();
+
+  // Brix zaman grafiği: hasat kayıtlarındaki brix değerleri, tarihe göre
+  const brixPoints = DATA.hasat
+    .filter(r=>r.tarih && r.brix)
+    .sort((a,b)=>new Date(a.tarih)-new Date(b.tarih))
+    .map(r=>({x:r.tarih, y:parseFloat(r.brix)}));
+
+  // Seri dağılımı (stokta olan şişe adedi)
+  const seriTotals = {Classic:0, Premium:0, Reserve:0};
+  DATA.siseleme.forEach(r=>{ if(seriTotals[r.seri]!==undefined) seriTotals[r.seri]+= (parseInt(r.adet)||0); });
+  const seriColors = {Classic:"#9a9384", Premium:"#4A90A4", Reserve:"#D4AF37"};
+  window.__pendingCharts = {
+    brixPoints,
+    seriSegments: Object.keys(seriTotals).map(s=>({value:seriTotals[s], color:seriColors[s]}))
+  };
+
+  return `
+  <div class="cards-grid">
+    <div class="stat-card"><div class="icon">🍇</div><div class="num">${c.toplamParti}</div><div class="label">Toplam Parti</div></div>
+    <div class="stat-card"><div class="icon">🧪</div><div class="num">${c.aktifFerm}</div><div class="label">Aktif Fermantasyon</div></div>
+    <div class="stat-card"><div class="icon">🛢️</div><div class="num">${c.ficidaBekleyen}</div><div class="label">Fıçıda Bekleyen</div></div>
+    <div class="stat-card"><div class="icon">🍾</div><div class="num">${c.stoktaSise}</div><div class="label">Stokta Şişe</div></div>
+  </div>
+
+  ${reminders.length ? `
+  <div class="section-title">🔔 Hatırlatmalar (${reminders.length})</div>
+  ${reminders.map(r=>`
+    <div class="reminder ${r.type}">
+      <div class="r-ic">${r.icon}</div>
+      <div><div class="r-t">${r.title}</div><div class="r-d">${r.detail}</div></div>
+    </div>`).join("")}
+  ` : ""}
+
+  <div class="section-title">📈 Brix Değişimi (Hasat)</div>
+  <canvas class="chart" id="brixChart"></canvas>
+
+  <div class="section-title">🥧 Seri Dağılımı (Stokta)</div>
+  <canvas class="chart" id="seriChart" style="height:160px"></canvas>
+  <div class="legend">
+    ${Object.keys(seriTotals).map(s=>`<span><i style="background:${seriColors[s]}"></i>${s}: ${seriTotals[s]}</span>`).join("")}
+  </div>
+
+  <div class="section-title">📋 Son Kayıtlar</div>
+  ${recent.length===0 ? `<div class="empty">Henüz kayıt yok.<br>Alt menüden bir aşama seçip ilk kaydını ekle.</div>` :
+    recent.map(({stage,r})=>renderCard(stage, r, true)).join("")}
+  `;
+}
+
+function refOptions(stage){
+  const cfg = STAGES[stage];
+  if(!cfg.ref) return [];
+  const refKey = cfg.refKey || "parti_no";
+  const seen = new Set();
+  const opts = [];
+  DATA[cfg.ref].forEach(r=>{
+    const v = r[refKey];
+    if(v && !seen.has(v)){ seen.add(v); opts.push(v); }
+  });
+  return opts;
+}
+
+function renderStage(stage){
+  const cfg = STAGES[stage];
+  const list = DATA[stage].slice().reverse();
+  return `
+  <button class="add-btn" onclick="openModal('${stage}')">➕ Yeni ${cfg.label} Kaydı</button>
+  <div class="section-title">${cfg.icon} Kayıtlar (${list.length})</div>
+  ${list.length===0 ? `<div class="empty">Henüz kayıt yok.</div>` :
+    list.map(r=>renderCard(stage, r, false)).join("")}
+  `;
+}
+
+function renderCard(stage, r, compact){
+  const cfg = STAGES[stage];
+  const titleKey = cfg.key;
+  const dateKey = cfg.fields.find(f=>f.t==="date"||f.t==="datetime-local");
+  const dateVal = dateKey ? r[dateKey.k] : "";
+  const bodyFields = cfg.fields.filter(f=>f.k!==titleKey && f.k!=="notlar" && f.t!=="date" && f.t!=="datetime-local");
+  let badgeHtml = "";
+  ["stok_durumu","onay","tip","seri"].forEach(bk=>{
+    if(r[bk]) badgeHtml += `<span class="badge ${badgeClass(bk,r[bk])}">${r[bk]}</span>`;
+  });
+  const qrPrefix = cfg.qrPrefix;
+  return `
+  <div class="record-card">
+    <div class="rc-top">
+      <div>
+        <div class="rc-title">${compact ? cfg.icon+" " : ""}${r[titleKey]||"(kayıt)"}</div>
+        <div class="rc-date">${fmtDate(dateVal)}${compact?" · "+cfg.label:""}</div>
+      </div>
+      <div class="rc-actions">
+        ${qrPrefix ? `<button class="icon-btn" onclick='openQr("${qrPrefix}${r[titleKey]}","${cfg.label}")' title="QR Kod">▦</button>` : ""}
+        <button class="del" onclick="deleteRecord('${stage}','${r.id}')">✕</button>
+      </div>
+    </div>
+    <div class="rc-body">
+      ${bodyFields.filter(f=>r[f.k]).map(f=>`<b>${f.l}:</b> ${r[f.k]}${unitFor(f.k)} &nbsp; `).join("")}
+      ${r.notlar ? `<br><span style="color:var(--muted)">${r.notlar}</span>` : ""}
+    </div>
+    ${badgeHtml}
+  </div>`;
+}
+function unitFor(k){
+  const units = {agirlik_kg:" kg", sira_miktari_l:" L", sicaklik:"°C", miktar_l:" L",
+    fiyat_tl:" TL", hedef_sure_ay:" ay", adet:" adet", hacim_ml:" ml"};
+  return units[k]||"";
+}
+
+/* ================= Render: Ayarlar ================= */
+function renderAyarlar(){
+  const role = getRole();
+  return `
+  <div class="section-title">👤 Aktif Rol</div>
+  <div class="role-grid">
+    ${Object.keys(ROLES).map(r=>`
+      <div class="role-opt ${role===r?'active':''}" onclick="changeRole('${r}')">${ROLES[r].label}</div>
+    `).join("")}
+  </div>
+  <div style="font-size:11.5px;color:var(--muted);margin-top:8px;">
+    Rol, alt menüde hangi sekmelerin göründüğünü belirler (ör. Tadım Uzmanı sadece Kalite Kontrol'ü görür).
+    Bu cihaz-içi bir kolaylık ayarıdır — veriler hâlâ aynı cihazda saklandığı için gerçek bir giriş/şifre koruması sağlamaz.
+  </div>
+
+  <div class="section-title">📄 Raporlar (PDF)</div>
+  <div class="settings-row">
+    <div><div class="t">Kalite Kontrol Raporu</div><div class="d">Tüm tadım kayıtlarını PDF olarak indir</div></div>
+    <button class="small-btn" onclick="generateQualityReportPdf()">Oluştur</button>
+  </div>
+  <div class="settings-row">
+    <div><div class="t">Üretim Özeti Raporu</div><div class="d">Fıçılar, stok ve özet sayılar PDF olarak</div></div>
+    <button class="small-btn" onclick="generateSummaryReportPdf()">Oluştur</button>
+  </div>
+
+  <div class="section-title">💾 Yedekleme</div>
+  <div class="settings-row">
+    <div><div class="t">📤 Yedek Al (Export)</div><div class="d">Tüm verileri JSON dosyası olarak indir</div></div>
+    <button class="small-btn" onclick="exportData()">İndir</button>
+  </div>
+  <div class="settings-row">
+    <div><div class="t">📥 Yedekten Yükle (Import)</div><div class="d">JSON dosyasından verileri geri yükle</div></div>
+    <button class="small-btn" onclick="document.getElementById('importFile').click()">Seç</button>
+    <input type="file" id="importFile" accept="application/json" style="display:none" onchange="importData(event)">
+  </div>
+  <div class="settings-row">
+    <div><div class="t">🔄 Otomatik Yedekler</div><div class="d">Cihazda otomatik saklanan son 3 kayıt anı (yanlışlıkla silmelere karşı)</div></div>
+    <button class="small-btn ghost" onclick="restoreAutoBackup()">Geri Yükle</button>
+  </div>
+
+  <div class="section-title">🗑️ Tehlikeli Alan</div>
+  <div class="settings-row">
+    <div><div class="t">Tüm Verileri Sil</div><div class="d">Bu işlem geri alınamaz</div></div>
+    <button class="small-btn ghost" onclick="clearAllData()">Sil</button>
+  </div>
+
+  <div class="section-title">ℹ️ Hakkında</div>
+  <div class="settings-row">
+    <div><div class="t">Ergines Balsamik Takip</div><div class="d">v2.0 — Barkod/QR, hatırlatmalar, PDF rapor, grafikler, rol filtresi eklendi. Veriler yalnızca bu cihazda saklanır.</div></div>
+  </div>
+  `;
+}
+function changeRole(r){ setRole(r); if(!ROLES[r].tabs.includes(TAB)) TAB="dashboard"; render(); }
+
+/* ================= Modallar ================= */
+function renderModal(){
+  if(!modalStage) return "";
+  const cfg = STAGES[modalStage];
+  return `
+  <div class="modal-backdrop" onclick="closeModalOutside(event)">
+    <div class="modal">
+      <h2>${cfg.icon} Yeni ${cfg.label} Kaydı</h2>
+      <form id="recordForm">
+        ${cfg.fields.map(f=>renderField(modalStage,f)).join("")}
+        <div class="modal-actions">
+          <button type="button" class="btn ghost" onclick="closeModal()">Vazgeç</button>
+          <button type="submit" class="btn primary">Kaydet</button>
+        </div>
+      </form>
+    </div>
+  </div>`;
+}
+function renderField(stage, f){
+  if(f.t==="select"){
+    return `<div class="field"><label>${f.l}${f.req?" *":""}</label>
+      <select name="${f.k}" ${f.req?"required":""}>
+        <option value="">Seçiniz</option>
+        ${f.opts.map(o=>`<option value="${o}">${o}</option>`).join("")}
+      </select></div>`;
+  }
+  if(f.t==="ref"){
+    const opts = refOptions(stage);
+    const selectHtml = `<select name="${f.k}" ${f.req?"required":""}>
+        <option value="">Seçiniz</option>
+        ${opts.map(o=>`<option value="${o}">${o}</option>`).join("")}
+      </select>`;
+    const scanBtn = f.scan ? `<button type="button" class="scan-btn" onclick="openScan('${stage}','${f.k}','${f.qrPrefix||''}')" title="Kamerayla Tara">📷</button>` : "";
+    return `<div class="field"><label>${f.l}${f.req?" *":""}</label>
+      <div class="field-with-scan">${selectHtml}${scanBtn}</div>
+      ${opts.length===0?`<div style="font-size:11px;color:var(--muted);margin-top:4px;">Önce ilgili aşamada kayıt oluşturman gerekiyor.</div>`:""}
+      </div>`;
+  }
+  if(f.t==="textarea"){
+    return `<div class="field"><label>${f.l}</label><textarea name="${f.k}"></textarea></div>`;
+  }
+  return `<div class="field"><label>${f.l}${f.req?" *":""}</label>
+    <input type="${f.t}" name="${f.k}" ${f.req?"required":""} ${f.step?`step="${f.step}"`:""} ${f.ph?`placeholder="${f.ph}"`:""}></div>`;
+}
+
+function renderQrModal(){
+  if(!qrModal) return "";
+  return `
+  <div class="modal-backdrop center" onclick="closeQrOutside(event)">
+    <div class="modal">
+      <h2>▦ QR Kod — ${qrModal.label}</h2>
+      <div class="qr-wrap">
+        <canvas id="qrCanvas"></canvas>
+        <div class="code">${qrModal.text}</div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" onclick="closeQr()">Kapat</button>
+        <button type="button" class="btn primary" onclick="downloadQr()">PNG İndir</button>
+      </div>
+    </div>
+  </div>`;
+}
+function closeQrOutside(e){ if(e.target.classList.contains("modal-backdrop")) closeQr(); }
+
+function renderScanModal(){
+  if(!scanModal) return "";
+  return `
+  <div class="modal-backdrop center">
+    <div class="modal">
+      <h2>📷 Kamerayla Tara</h2>
+      <video id="scanVideo" playsinline muted></video>
+      <div class="scan-hint">QR kodu kameraya göster — otomatik algılanacak.</div>
+      <div class="scan-hint" id="scanError" style="color:var(--danger)"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" onclick="closeScan()">Vazgeç</button>
+      </div>
+    </div>
+  </div>`;
+}
+
+/* ================= Ana Render ================= */
+function render(){
+  const role = getRole();
+  const visibleTabs = ROLES[role].tabs;
+  let body = "";
+  if(TAB==="dashboard") body = renderDashboard();
+  else if(TAB==="ayarlar") body = renderAyarlar();
+  else body = renderStage(TAB);
+
+  const allTabs = [
+    ["dashboard","📊","Özet"], ["hasat","🍇","Hasat"], ["yogunlastirma","🔥","Yoğun."],
+    ["fermantasyon","🧪","Ferm."], ["olgunlastirma","🛢️","Fıçı"], ["kalite","✅","Kalite"],
+    ["siseleme","🍾","Şişele"], ["ayarlar","⚙️","Ayarlar"]
+  ].filter(t=>visibleTabs.includes(t[0]));
+
+  app.innerHTML = `
+    <header class="topbar">
+      <div class="logo">🍇</div>
+      <div>
+        <h1>${tabTitle()}</h1>
+        <div class="sub">Ergines Bağcılık</div>
+      </div>
+      <div class="role-pill">${ROLES[role].label}</div>
+    </header>
+    <main>${body}</main>
+    ${renderModal()}
+    ${renderQrModal()}
+    ${renderScanModal()}
+    <nav class="tabbar">
+      ${allTabs.map(([key,icon,label])=>tabBtn(key,icon,label)).join("")}
+    </nav>
+  `;
+  const form = document.getElementById("recordForm");
+  if(form) form.addEventListener("submit", handleSubmit);
+
+  if(TAB==="dashboard" && window.__pendingCharts){
+    const {brixPoints, seriSegments} = window.__pendingCharts;
+    requestAnimationFrame(()=>{
+      drawLineChart(document.getElementById("brixChart"), brixPoints, "#2D5016");
+      drawPieChart(document.getElementById("seriChart"), seriSegments);
+    });
+  }
+}
+function tabTitle(){
+  const titles = {dashboard:"Özet", hasat:"Hasat ve Şıra", yogunlastirma:"Yoğunlaştırma",
+    fermantasyon:"Fermantasyon", olgunlastirma:"Olgunlaştırma", kalite:"Kalite Kontrol",
+    siseleme:"Şişeleme ve Stok", ayarlar:"Ayarlar"};
+  return titles[TAB] || "Ergines Balsamik Takip";
+}
+function tabBtn(key,icon,label){
+  return `<button class="${TAB===key?'active':''}" onclick="setTab('${key}')">
+    <span class="ic">${icon}</span><span class="lb">${label}</span></button>`;
+}
+
+/* ================= Aksiyonlar ================= */
+function setTab(t){ TAB=t; render(); window.scrollTo(0,0); }
+function openModal(stage){ modalStage=stage; render(); }
+function closeModal(){ modalStage=null; render(); }
+function closeModalOutside(e){ if(e.target.classList.contains("modal-backdrop")) closeModal(); }
+
+function handleSubmit(e){
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const rec = {id: uid()};
+  for(const [k,v] of fd.entries()) rec[k]=v;
+  DATA[modalStage].push(rec);
+  saveData(DATA);
+  showToast("Kayıt eklendi ✓");
+  const savedStage = modalStage;
+  modalStage = null;
+  TAB = savedStage;
+  render();
+}
+function deleteRecord(stage,id){
+  if(!confirm("Bu kaydı silmek istediğine emin misin?")) return;
+  DATA[stage] = DATA[stage].filter(r=>r.id!==id);
+  saveData(DATA);
+  render();
+  showToast("Kayıt silindi");
+}
+function showToast(msg){
+  const t = document.createElement("div");
+  t.className="toast"; t.textContent=msg;
+  document.body.appendChild(t);
+  setTimeout(()=>t.remove(),1800);
+}
+function exportData(){
+  const blob = new Blob([JSON.stringify(DATA,null,2)], {type:"application/json"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = `balsamik-yedek-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); URL.revokeObjectURL(url);
+  localStorage.setItem(LASTBACKUP_KEY, new Date().toISOString());
+  showToast("Yedek indirildi");
+  render();
+}
+function importData(e){
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try{
+      const parsed = JSON.parse(reader.result);
+      STAGE_ORDER.forEach(s=>{ if(!Array.isArray(parsed[s])) parsed[s]=DATA[s]||[]; });
+      DATA = parsed; saveData(DATA); render();
+      showToast("Veriler yüklendi ✓");
+    }catch(err){ alert("Dosya okunamadı: "+err.message); }
+  };
+  reader.readAsText(file);
+  e.target.value = "";
+}
+function restoreAutoBackup(){
+  const keys = Object.keys(localStorage).filter(k=>k.startsWith(AUTOBACKUP_PREFIX)).sort().reverse();
+  if(keys.length===0){ alert("Henüz otomatik yedek yok."); return; }
+  const dates = keys.map(k=>k.replace(AUTOBACKUP_PREFIX,""));
+  const choice = prompt("Geri yüklenecek otomatik yedeği seç (0 = en yeni):\n" + dates.map((d,i)=>`${i}: ${new Date(d).toLocaleString("tr-TR")}`).join("\n"), "0");
+  const idx = parseInt(choice);
+  if(isNaN(idx) || !keys[idx]) return;
+  if(!confirm("Mevcut veriler bu yedekle değiştirilecek. Emin misin?")) return;
+  DATA = JSON.parse(localStorage.getItem(keys[idx]));
+  saveData(DATA); render();
+  showToast("Otomatik yedek geri yüklendi");
+}
+function clearAllData(){
+  if(!confirm("TÜM veriler silinecek. Emin misin?")) return;
+  if(!confirm("Bu işlem geri alınamaz. Yine de sil?")) return;
+  const empty = {}; STAGE_ORDER.forEach(s=>empty[s]=[]);
+  DATA = empty; saveData(DATA); render();
+  showToast("Tüm veriler silindi");
+}
+
+/* ================= Başlat ================= */
+render();
+if("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  });
+}
+if("Notification" in window && Notification.permission === "default"){
+  // İzin sadece kullanıcı bir aksiyon aldığında istenir (tarayıcı kısıtlaması); burada sessizce atlanır.
+}
+</script>
+</body>
+</html>
